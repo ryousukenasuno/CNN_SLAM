@@ -1,0 +1,113 @@
+ubuntu16.04にLSD_SLAMをinstallした時のlogです．
+使用するLSD_SLAMはubuntu14.04でROSのindigoが
+推奨環境だったので変更箇所がいくつかあります．
+----------------------------------------------
+Requirement
+----------------------------------------------
+
+Opencv3.2.0 -> 	https://github.com/opencv/opencv/releases/tag/3.2.0
+ROS kinetic -> 	apt-getを使用する
+LSD_SLAMのソースコード -> https://github.com/tum-vision/lsd_slam
+libQGLViewer-2.6.3 -> http://libqglviewer.com/src/
+
+----------------------------------------------
+Install
+----------------------------------------------
+Opencv3.2.0
+	ソースをダウンロードする．
+	解凍しOpencv3.2.0の中にbuildディレクトリを作成する．
+	buildディレクトリで以下のコマンドでcmake,make,make installを行う．
+
+		$cmake -D CMAKE_BUILD_TYPE=RELEASE -D WITH_OPENCL=OFF -D CMAKE_INSTALL_PREFIX=/usr/local ..	
+		$make -j
+		$sudo make isntall -j
+
+	以上でopencvのinstallは終了．
+
+ROS kinetic
+	参考 -> http://wiki.ros.org/kinetic/Installation/Ubuntu
+	以下のコマンドでpackage listを更新する．	
+
+		$sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+		$sudo apt-get update
+
+	以下のコマンドでros kineticをinstallする．
+
+		$sudo apt-get install ros-kinetic-desktop-full
+
+	rosの依存packageを管理するrosdepを初期化するために以下のコマンドを打つ．
+
+		$sudo rosdep init
+		$rosdep update
+
+	以下のコマンドでros環境のsetupを行う．	
+
+		$echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+		$source ~/.bashrc
+
+	以下のコマンドでrosのソースをinstallする．
+
+		$sudo apt-get install python-rosinstall
+
+	以上でros kineticのinstallは終了．
+
+LSD_SLAM
+	参考(ただしkineticではなくindigo用なのであくまで参考程度に -> https://noshumi.blogspot.jp/2016/12/lsd-slamros1.html
+	LSD_SLAMに必要なpackageのinstallを行う．
+
+		$ sudo apt-get install ros-kinetic-libg2o ros-kinetic-cv-bridge liblapack-dev libblas-dev freeglut3-dev libqglviewer-dev libsuitesparse-dev libx11-dev
+
+	
+	以下のコマンドでディレクトリを作成し環境を作る．
+
+		$ mkdir ~/rosbuild_ws
+		$ cd ~/rosbuild_ws
+		$ rosws init . /opt/ros/kinetic
+		$ mkdir package_dir
+		$ rosws set ~/rosbuild_ws/package_dir -t .
+		$ echo "source ~/rosbuild_ws/setup.bash" >> ~/.bashrc
+		$ bash
+	
+	package_dirに移動しgit cloneでソースをダウンロードする．
+
+		$  git clone https://github.com/tum-vision/lsd_slam.git lsd_slam
+	
+	LSD_SLAMをbuildします．
+
+		$  rosmake lsd_slam
+	
+	基本的にこの作業でinstallは終了しますが今回はubuntu16.04にros kineticをinstallして
+	LSD_SLAMをinstallしたので動きませんでした．ここから先はLSD_SLAMをkineticで動かすために
+	変更した点を示します．
+
+
+	
+--------
+ 変更点
+--------
+	まず下記の２つのソースで使用されている'を取り除く．ただし文法的に使用しているものではなく
+	error文などの文字列の中に使用されているものだけ取り除いてください．(what'sの'など)
+	
+		~/rosbuild_ws/package_dir/lsd_slam/lsd_slam_viewer/cfg/LSDSLAMViewerParams.cfg
+		~/rosbuild_ws/package_dir/lsd_slam/lsd_slam_core/cfg/LSDDebugParams.cfg
+	
+	LSD_SLAMの以下の変数の定義がkineticと合わなかったのでfloatからqrealに変更した．
+	
+		~/rosbuild_ws/package_dir/lsd_slam/lsd_slam_viewer/src/PointCloudViewer.cpp:326
+			float x,y,z; -> qreal x,y,z;
+
+		~/rosbuild_ws/package_dir/lsd_slam/lsd_slam_viewer/src/PointCloudViewer.h:134
+			float x,y,z; -> qreal x,y,z;
+
+	libQGLViewerのversionが原因でviewerが動かなかったのでlibQGLViewer2.6.3をinstallした
+	http://libqglviewer.com/src/からソースをダウンロードする．
+	解凍しlibQGLViewer2.6.3ディレクトリで以下のコマンドを打つ．
+	
+		$ make
+		$ sudo make install	
+	
+	ここで/usr/libのlibQGLViewerにリンクがはられてなかったので貼り直した．
+	
+		$ ln -s /usr/lib/x86_64-linux-gnu/libQGLViewe /usr/lib/libQGLViewer.so	
+	
+	以上でLSD_SLAMのinstallは終わりです．
