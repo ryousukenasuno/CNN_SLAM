@@ -1,0 +1,45 @@
+LSD_SLAMのdepthを推定する箇所をCNNでdepth-prediction
+したものを使うように変更した時のlogです．
+----------------------------------------------
+変更したファイル
+----------------------------------------------
+CNN_SLAM/lsd_slam_core/src/main_on_images.cpp
+CNN_SLAM/lsd_slam_core/src/SlamSystem.cpp
+CNN_SLAM/lsd_slam_core/src/SlamSystem.h
+CNN_SLAM/lsd_slam_core/src/DepthEstimation/DepthMap.cpp
+CNN_SLAM/lsd_slam_core/src/DepthEstimation/DepthMap.h
+
+----------------------------------------------
+変更点
+----------------------------------------------
+
+CNN_SLAM/lsd_slam_core/src/main_on_images.cpp
+	
+	depthFilesを読み込むように引数を追加しincrementalにdepthFileを読み込むように変更した．
+
+CNN_SLAM/lsd_slam_core/src/SlamSystem.cpp
+	DepthMap::initializeRandomly -> DepthMap::initializeFromDepth にするために
+	SlamSystem::InitFromDepthを作成しSlamSystem::randomInit -> SlamSystem::InitFromDepthとした.
+
+CNN_SLAM/lsd_slam_core/src/SlamSystem.h
+	
+	関数の定義を以下のように変更した．
+	void randomInit(uchar* image, double timeStamp, int id) -> void InitFromDepth(uchar* image, double timeStamp, int id,std::string depthFiles)
+
+
+CNN_SLAM/lsd_slam_core/src/DepthEstimation/DepthMap.cpp
+
+	クラスDepthMap::initializeRandomlyでdepthをランダムに与えていたところを
+ 	DepthMap::initializeFromDepthを作成しpredictしたdepthを与えるように変更した．
+	またdepthにはinverse-depthを使用するのでpredict-depthの逆数を取って使用した．	
+
+	単眼LSD_SLAMではDepthMap::createKeyFrame内でpropagateDepth(new_keyframe)でdepthを伝搬して
+	次のframeのdepthを求めていた．CNN_SLAMの場合毎frameですでにdepthが求まっているので
+	伝搬させずにdepthを読み込むように変更した．
+	
+CNN_SLAM/lsd_slam_core/src/DepthEstimation/DepthMap.h
+	
+	class DepthMap でdepthPathをpublicで定義しどこのfileでもpredictionしたfileにアクセスできるように変更した．
+	また関数の定義を以下のように変更した．
+		void initializeRandomly(Frame* new_frame) -> void initializeFromDepth(Frame* new_frame, std::string depthFiles)
+
